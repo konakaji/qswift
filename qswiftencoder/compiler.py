@@ -1,44 +1,23 @@
 import collections.abc
-from abc import ABC
+import random
 from qwrapper.circuit import QWrapper
-from qwrapper.operator import PauliTimeEvolution, PauliObservable
+from qwrapper.operator import PauliTimeEvolution
+from qswiftencoder.operator import *
+from qswiftencoder.initializer import CircuitInitializer
 
 
-class Operator(ABC):
-    pass
+class MultiIndexSampler:
+    def __init__(self, sampler):
+        self.sampler = sampler
 
-
-class TimeOperator(Operator):
-    def __init__(self, j):
-        self.j = j
-
-    def __repr__(self) -> str:
-        return "T" + str(self.j)
-
-
-class SwiftOperator(Operator):
-    def __init__(self, j, b):
-        self.j = j
-        self.b = b
-
-    def __repr__(self):
-        return f"S{self.j}:{self.b}"
-
-
-class LOperator(Operator):
-    def __init__(self, j):
-        self.j = j
-
-    def __repr__(self):
-        return f"L{self.j}"
-
-
-class MeasurementOperator(Operator):
-    def __init__(self, j):
-        self.j = j
-
-    def __repr__(self):
-        return f"M{self.j}"
+    def sample(self, s, n):
+        if s == 0:
+            return [self.sampler.sample_index() for _ in range(n)]
+        elif s == 1:
+            index = self.sampler.sample_index()
+            return [index for _ in range(n)]
+        else:
+            raise AttributeError("illegal s value.")
 
 
 class SwiftChannel:
@@ -57,6 +36,12 @@ class SwiftChannel:
     def add_swift_operator(self, j, b):
         self.operators.append(SwiftOperator(j, b))
 
+    def add_multi_swift_operators(self, j_vec, b_vec):
+        self.operators.append(MultiSwiftOperator(j_vec, b_vec))
+
+    def shuffle(self, seed):
+        random.Random(seed).shuffle(self.operators)
+
     def set_measurement_operator(self, j):
         self.measurement = MeasurementOperator(j)
 
@@ -71,7 +56,7 @@ class QSwiftStringEncoder:
 
 
 class QSwiftCircuitExecutor:
-    def __init__(self, paulis, observables, tau):
+    def __init__(self, paulis, observables, initializer: CircuitInitializer, tau, nshot, tool):
         if isinstance(paulis, collections.abc.Sequence):
             map = {}
             for j, pauli in enumerate(paulis):
@@ -82,15 +67,20 @@ class QSwiftCircuitExecutor:
             for j, pauli in enumerate(paulis):
                 map[j] = pauli
             observables = map
+        self._initializer = initializer
         self._paulis = paulis
         self._observables = observables
         self._tau = tau
         self._cache = {}
+        self._nqubit = list(self._observables.values())[0].nqubit
+        self._nshot = nshot
+        self._tool = tool
 
-    def compute(self, qc: QWrapper, code, nshot=0):
+    def compute(self, code):
+        qc = self._initializer.init_circuit(self._nqubit, self._nqubit - 1, self._tool)
         operators = []
-        ancilla_index = qc.nqubit - 1
-        targets = [j for j in range(qc.nqubit - 1)]
+        ancilla_index = self._nqubit - 1
+        targets = [j for j in range(self._nqubit - 1)]
         items = code.split(" ")
         coeff = float(items[0])
         for s in items[1:]:
@@ -104,14 +94,14 @@ class QSwiftCircuitExecutor:
         for operator in operators:
             self.add_gate(qc, operator, self._tau, ancilla_index, targets)
             if isinstance(operator, MeasurementOperator):
-                return coeff * self._observables[operator.j].get_value(qc, nshot)
+                return coeff * self._observables[operator.j].get_value(qc, self._nshot)
         raise AttributeError("measurement is not set")
 
     def add_gate(self, qc: QWrapper, operator: Operator, tau, ancilla_index, targets):
         if isinstance(operator, SwiftOperator):
             qc.s(ancilla_index)
             pauli = self._paulis[operator.j]
-            if pauli.sign == -1:
+            if pauli._sign == -1:
                 qc.z(ancilla_index)
             if operator.b == 0:
                 qc.z(ancilla_index)
@@ -127,12 +117,13 @@ class QSwiftCircuitExecutor:
 
 
 class Compiler:
-    def __init__(self, *, operators, observables, tau):
+    def __init__(self, *, operators, observables, initializer, tau, nshot=0, tool="qulacs"):
         self.string_encoder = QSwiftStringEncoder()
-        self.circuit_encoder = QSwiftCircuitExecutor(operators, observables, tau)
+        self.circuit_encoder = QSwiftCircuitExecutor(operators, observables, initializer, tau, nshot, tool)
+        self.initializer = initializer
 
     def to_string(self, swift_channel: SwiftChannel):
         return self.string_encoder.encode(swift_channel)
 
-    def execute(self, qc: QWrapper, code, nshot):
-        return self.circuit_encoder.compute(qc, code, nshot)
+    def evaluate(self, code):
+        return self.circuit_encoder.compute(code)
