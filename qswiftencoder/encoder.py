@@ -21,7 +21,7 @@ class SwiftOperator(Operator):
         self.b = b
 
     def __repr__(self):
-        return f"S{self.j}-{self.b}"
+        return f"S{self.j}:{self.b}"
 
 
 class LOperator(Operator):
@@ -92,10 +92,10 @@ class QSwiftCircuitEncoder:
         coeff = float(items[0])
         for s in items[1:]:
             if s.startswith("T"):
-                operators.append(TimeOperator(int(s[1:])))
+                operators.append(TimeOperator(s[1:]))
             elif s.startswith("S"):
-                j, b = s[1:].split("-")
-                operators.append(SwiftOperator(int(j), int(b)))
+                j, b = s[1:].split(":")
+                operators.append(SwiftOperator(j, int(b)))
         for operator in operators:
             self.add_gate(qc, operator, self._tau)
         return coeff, qc
