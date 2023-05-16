@@ -41,7 +41,7 @@ class MeasurementOperator(Operator):
         return f"M{self.j}"
 
 
-class SwiftChannels:
+class SwiftChannel:
     def __init__(self, coeff):
         self.coeff = coeff
         self.operators = []
@@ -54,44 +54,19 @@ class SwiftChannels:
         for j in array:
             self.add_time_operator(j)
 
-    def add_l_operator(self, j):
-        self.operators.append(LOperator(j))
+    def add_swift_operator(self, j, b):
+        self.operators.append(SwiftOperator(j, b))
 
     def set_measurement_operator(self, j):
         self.measurement = MeasurementOperator(j)
 
 
-class QSwiftImplementableEncoder:
-    def encode(self, channels: SwiftChannels) -> [[Operator]]:
-        results = self.do_encode([], channels.operators)
-        if channels.measurement is not None:
-            for operators in results:
-                operators.append(channels.measurement)
-        return results
-
-    def do_encode(self, current, operators):
-        results = []
-        result = current
-        for j, o in enumerate(operators):
-            if isinstance(o, LOperator):
-                r1 = result.copy()
-                r2 = result.copy()
-                r1.append(SwiftOperator(o.j, b=0))
-                r2.append(SwiftOperator(o.j, b=1))
-                results.extend(self.do_encode(r1, operators[j + 1:]))
-                results.extend(self.do_encode(r2, operators[j + 1:]))
-                return results
-            result.append(o)
-        return [result]
-
-
 class QSwiftStringEncoder:
-    def encode(self, coeff, operators):
-        res = [str(coeff)]
-        for o in operators:
-            if isinstance(o, LOperator):
-                raise AttributeError("L Operator is not implementable.")
+    def encode(self, swift_channel: SwiftChannel):
+        res = [str(swift_channel.coeff)]
+        for o in swift_channel.operators:
             res.append(str(o))
+        res.append(str(swift_channel.measurement))
         return " ".join(res)
 
 
@@ -114,8 +89,8 @@ class QSwiftCircuitExecutor:
 
     def compute(self, qc: QWrapper, code, nshot=0):
         operators = []
-        ancilla_index = qc.nqubit
-        targets = [j for j in qc.nqubit]
+        ancilla_index = qc.nqubit - 1
+        targets = [j for j in range(qc.nqubit - 1)]
         items = code.split(" ")
         coeff = float(items[0])
         for s in items[1:]:
@@ -153,16 +128,11 @@ class QSwiftCircuitExecutor:
 
 class Compiler:
     def __init__(self, *, operators, observables, tau):
-        self.implementable_encoder = QSwiftImplementableEncoder()
         self.string_encoder = QSwiftStringEncoder()
         self.circuit_encoder = QSwiftCircuitExecutor(operators, observables, tau)
 
-    def to_strings(self, swift_channels: SwiftChannels):
-        operators_array = self.implementable_encoder.encode(swift_channels)
-        results = []
-        for operators in operators_array:
-            results.append(self.string_encoder.encode(swift_channels.coeff, operators))
-        return results
+    def to_string(self, swift_channel: SwiftChannel):
+        return self.string_encoder.encode(swift_channel)
 
     def execute(self, qc: QWrapper, code, nshot):
         return self.circuit_encoder.compute(qc, code, nshot)
