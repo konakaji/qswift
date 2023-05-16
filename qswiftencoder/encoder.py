@@ -1,6 +1,7 @@
+import collections.abc
 from abc import ABC
 from qwrapper.circuit import QWrapper
-from qwrapper.operator import PauliTimeEvolution
+from qwrapper.operator import PauliTimeEvolution, PauliObservable
 
 
 class Operator(ABC):
@@ -32,10 +33,19 @@ class LOperator(Operator):
         return f"L{self.j}"
 
 
+class MeasurementOperator(Operator):
+    def __init__(self, j):
+        self.j = j
+
+    def __repr__(self):
+        return f"M{self.j}"
+
+
 class SwiftChannels:
     def __init__(self, coeff):
         self.coeff = coeff
         self.operators = []
+        self.measurement = None
 
     def add_time_operator(self, j):
         self.operators.append(TimeOperator(j))
@@ -47,10 +57,17 @@ class SwiftChannels:
     def add_l_operator(self, j):
         self.operators.append(LOperator(j))
 
+    def set_measurement_operator(self, j):
+        self.measurement = MeasurementOperator(j)
+
 
 class QSwiftImplementableEncoder:
-    def encode(self, operators) -> [[Operator]]:
-        return self.do_encode([], operators)
+    def encode(self, channels: SwiftChannels) -> [[Operator]]:
+        results = self.do_encode([], channels.operators)
+        if channels.measurement is not None:
+            for operators in results:
+                operators.append(channels.measurement)
+        return results
 
     def do_encode(self, current, operators):
         results = []
@@ -78,41 +95,56 @@ class QSwiftStringEncoder:
         return " ".join(res)
 
 
-class QSwiftCircuitEncoder:
-    def __init__(self, ancilla_index, targets, paulis, tau):
-        self._ancilla_index = ancilla_index
-        self._targets = targets
+class QSwiftCircuitExecutor:
+    def __init__(self, paulis, observables, tau):
+        if isinstance(paulis, collections.abc.Sequence):
+            map = {}
+            for j, pauli in enumerate(paulis):
+                map[j] = pauli
+            paulis = map
+        if isinstance(observables, collections.abc.Sequence):
+            map = {}
+            for j, pauli in enumerate(paulis):
+                map[j] = pauli
+            observables = map
         self._paulis = paulis
+        self._observables = observables
         self._tau = tau
         self._cache = {}
 
-    def encode(self, qc: QWrapper, code):
+    def compute(self, qc: QWrapper, code, nshot=0):
         operators = []
+        ancilla_index = qc.nqubit
+        targets = [j for j in qc.nqubit]
         items = code.split(" ")
         coeff = float(items[0])
         for s in items[1:]:
             if s.startswith("T"):
-                operators.append(TimeOperator(s[1:]))
+                operators.append(TimeOperator(int(s[1:])))
             elif s.startswith("S"):
                 j, b = s[1:].split(":")
-                operators.append(SwiftOperator(j, int(b)))
+                operators.append(SwiftOperator(int(j), int(b)))
+            elif s.startswith("M"):
+                operators.append(MeasurementOperator(int(s[1:])))
         for operator in operators:
-            self.add_gate(qc, operator, self._tau)
-        return coeff, qc
+            self.add_gate(qc, operator, self._tau, ancilla_index, targets)
+            if isinstance(operator, MeasurementOperator):
+                return coeff * self._observables[operator.j].get_value(qc, nshot)
+        raise AttributeError("measurement is not set")
 
-    def add_gate(self, qc: QWrapper, operator: Operator, tau):
+    def add_gate(self, qc: QWrapper, operator: Operator, tau, ancilla_index, targets):
         if isinstance(operator, SwiftOperator):
-            qc.s(self._ancilla_index)
+            qc.s(ancilla_index)
             pauli = self._paulis[operator.j]
             if pauli.sign == -1:
-                qc.z(self._ancilla_index)
+                qc.z(ancilla_index)
             if operator.b == 0:
-                qc.z(self._ancilla_index)
-                qc.x(self._ancilla_index)
-                pauli.add_controlled_circuit(self._ancilla_index, self._targets, qc)
-                qc.x(self._ancilla_index)
+                qc.z(ancilla_index)
+                qc.x(ancilla_index)
+                pauli.add_controlled_circuit(ancilla_index, targets, qc)
+                qc.x(ancilla_index)
             else:
-                pauli.add_controlled_circuit(self._ancilla_index, self._targets, qc)
+                pauli.add_controlled_circuit(ancilla_index, targets, qc)
         elif isinstance(operator, TimeOperator):
             if operator.j not in self._cache:
                 self._cache[operator.j] = PauliTimeEvolution(self._paulis[operator.j], tau)
@@ -120,17 +152,17 @@ class QSwiftCircuitEncoder:
 
 
 class Compiler:
-    def __init__(self, ancilla_index, targets, paulis, tau):
+    def __init__(self, *, operators, observables, tau):
         self.implementable_encoder = QSwiftImplementableEncoder()
         self.string_encoder = QSwiftStringEncoder()
-        self.circuit_encoder = QSwiftCircuitEncoder(ancilla_index, targets, paulis, tau)
+        self.circuit_encoder = QSwiftCircuitExecutor(operators, observables, tau)
 
     def to_strings(self, swift_channels: SwiftChannels):
-        operators_array = self.implementable_encoder.encode(swift_channels.operators)
+        operators_array = self.implementable_encoder.encode(swift_channels)
         results = []
         for operators in operators_array:
             results.append(self.string_encoder.encode(swift_channels.coeff, operators))
         return results
 
-    def to_circuit(self, qc: QWrapper, str):
-        return self.circuit_encoder.encode(qc, str)
+    def execute(self, qc: QWrapper, code, nshot):
+        return self.circuit_encoder.compute(qc, code, nshot)
