@@ -4,14 +4,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="qswiftencoder",
-    version="0.0.5",
+    name="qswift",
+    version="0.0.6",
     author="kouhei nakaji",
     author_email="nakajijiji@gmail.com",
     description="You can receive the message 'Hello!!!'",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/konakaji/qswiftencoder",
+    url="https://github.com/konakaji/qswift",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
