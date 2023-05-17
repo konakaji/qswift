@@ -1,12 +1,11 @@
 from unittest import TestCase
-from qswiftencoder.encoder import *
+from qswift.compiler import *
+from qswift.initializer import XBasisInitializer
 from qwrapper.operator import PauliObservable
-from qwrapper.circuit import init_circuit
 
 
 class TestQSwiftCircuitEncoder(TestCase):
     def test_encode(self):
-        operators = []
         channel = SwiftChannel(2.2)
         channel.add_time_operators([-1, -1, 2])
         channel.add_swift_operator(-1, 0)
@@ -16,10 +15,8 @@ class TestQSwiftCircuitEncoder(TestCase):
         self.assertEquals("2.2 T-1 T-1 T2 S-1:0 M0", code)
         paulis = {-1: PauliObservable("XXXIIIII"), 2: PauliObservable("YYYIIIII")}
         observables = {0: PauliObservable("XZZZIIIII")}
-        encoder = QSwiftCircuitExecutor(paulis, observables, 0.1)
-
-        qc = init_circuit(9, "qulacs")
-        encoder.compute(qc, code)
+        encoder = QSwiftCircuitExecutor(paulis, observables, XBasisInitializer(), 0.1, nshot=10)
+        encoder.compute(code)
 
 
 class TestQSwiftImplementableEncoder(TestCase):
@@ -36,7 +33,9 @@ class TestQSwiftImplementableEncoder(TestCase):
 
 class TestCompiler(TestCase):
     def test_to_strings(self):
-        compiler = Compiler(operators=["XX", "YY", "ZZ"], observables=["ZY", "XY"], tau=2)
+        compiler = Compiler(operators=[PauliObservable("XX"), PauliObservable("YY"), PauliObservable("ZZ")],
+                            observables=[PauliObservable("ZY"), PauliObservable("XY")], initializer=XBasisInitializer(),
+                            tau=2)
         channels = SwiftChannel(0.1)
         channels.add_time_operators([2, 1])
         channels.add_swift_operator(0, 0)

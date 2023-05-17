@@ -1,18 +1,19 @@
 import collections.abc
 import random
 from qwrapper.circuit import QWrapper
-from qwrapper.operator import PauliTimeEvolution
-from qswiftencoder.operator import *
-from qswiftencoder.initializer import CircuitInitializer
+from qwrapper.operator import PauliTimeEvolution, PauliObservable
+from qwrapper.sampler import ImportantSampler
+from qswift.operator import *
+from qswift.initializer import CircuitInitializer
 
 
 class MultiIndexSampler:
-    def __init__(self, sampler):
+    def __init__(self, sampler: ImportantSampler):
         self.sampler = sampler
 
     def sample(self, s, n):
         if s == 0:
-            return [self.sampler.sample_index() for _ in range(n)]
+            return self.sampler.sample_indices(count=n)
         elif s == 1:
             index = self.sampler.sample_index()
             return [index for _ in range(n)]
@@ -56,7 +57,7 @@ class QSwiftStringEncoder:
 
 
 class QSwiftCircuitExecutor:
-    def __init__(self, paulis, observables, initializer: CircuitInitializer, tau, nshot, tool):
+    def __init__(self, paulis, observables, initializer: CircuitInitializer, tau, nshot=0, tool="qulacs"):
         if isinstance(paulis, collections.abc.Sequence):
             map = {}
             for j, pauli in enumerate(paulis):
@@ -64,12 +65,15 @@ class QSwiftCircuitExecutor:
             paulis = map
         if isinstance(observables, collections.abc.Sequence):
             map = {}
-            for j, pauli in enumerate(paulis):
-                map[j] = pauli
+            for j, obs in enumerate(observables):
+                map[j] = obs
             observables = map
+        obs_map = {}
+        for k, obs in observables.items():
+            obs_map[k] = PauliObservable(obs.p_string + "X", obs.sign)
         self._initializer = initializer
         self._paulis = paulis
-        self._observables = observables
+        self._observables = obs_map
         self._tau = tau
         self._cache = {}
         self._nqubit = list(self._observables.values())[0].nqubit
@@ -77,12 +81,13 @@ class QSwiftCircuitExecutor:
         self._tool = tool
 
     def compute(self, code):
-        qc = self._initializer.init_circuit(self._nqubit, self._nqubit - 1, self._tool)
-        operators = []
         ancilla_index = self._nqubit - 1
+        qc = self._initializer.init_circuit(self._nqubit, {ancilla_index}, self._tool)
+        operators = []
         targets = [j for j in range(self._nqubit - 1)]
         items = code.split(" ")
         coeff = float(items[0])
+        qc.h(ancilla_index)
         for s in items[1:]:
             if s.startswith("T"):
                 operators.append(TimeOperator(int(s[1:])))
@@ -94,7 +99,9 @@ class QSwiftCircuitExecutor:
         for operator in operators:
             self.add_gate(qc, operator, self._tau, ancilla_index, targets)
             if isinstance(operator, MeasurementOperator):
-                return coeff * self._observables[operator.j].get_value(qc, self._nshot)
+                value = coeff * self._observables[operator.j].get_value(qc, self._nshot)
+                qc.draw_and_show()
+                return value
         raise AttributeError("measurement is not set")
 
     def add_gate(self, qc: QWrapper, operator: Operator, tau, ancilla_index, targets):

@@ -1,8 +1,8 @@
 from concurrent.futures import ThreadPoolExecutor
 
-import numpy as np
+import numpy as np, logging
 
-from qswiftencoder.compiler import Compiler
+from qswift.compiler import Compiler
 
 
 class QSwiftExecutor:
@@ -12,10 +12,14 @@ class QSwiftExecutor:
     def execute(self, swift_channels):
         strings = []
         for swift_channel in swift_channels:
-            strings.append(self.compiler.to_string(swift_channel))
+            string = self.compiler.to_string(swift_channel)
+            strings.append(string)
         values = []
-        for string in strings:
-            values.append(self.compiler.evaluate(string))
+        for j, string in enumerate(strings):
+            value = self.compiler.evaluate(string)
+            values.append(value)
+            if j % 1000 == 0:
+                logging.info(f"{j}")
         return np.sum(values)
 
 

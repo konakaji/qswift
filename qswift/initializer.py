@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from qwrapper.circuit import init_circuit
-from qswiftencoder.util import zero_state
+from qswift.util import zero_state
 import numpy as np
 
 

@@ -1,4 +1,6 @@
 import math, numpy as np
+from qwrapper.obs import PauliObservable
+from qwrapper.hamiltonian import Hamiltonian
 
 
 def binom(N, k):
@@ -24,3 +26,15 @@ def zero_state(dim):
     result = np.diag(np.zeros(dim))
     result[0][0] = 1
     return result
+
+
+def make_positive(hamiltonian: Hamiltonian):
+    hs = []
+    paulis = []
+    for h, p in zip(hamiltonian.hs, hamiltonian.paulis):
+        hs.append(abs(h))
+        if h < 0:
+            paulis.append(PauliObservable(p.p_string, -p.sign))
+        else:
+            paulis.append(p)
+    return Hamiltonian(hs, paulis, hamiltonian.nqubit)

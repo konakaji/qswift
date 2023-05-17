@@ -19,7 +19,8 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     install_requires=[
-        "qwrapper @ git+ssh://git@github.com/konakaji/qwrapper.git@ab189953740330f759ab4ba3e780ce7b087ab902"
+        "qwrapper @ git+ssh://git@github.com/konakaji/qwrapper.git"
+        "benchmark @ git+ssh://git@github.com/konakaji/benchmark.git"
     ],
     python_requires='>=3.6',
 )

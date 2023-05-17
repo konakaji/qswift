@@ -5,7 +5,7 @@ import numpy as np
 from bitarray.util import int2ba
 from qwrapper.sampler import FasterImportantSampler
 
-from qswiftencoder.compiler import MultiIndexSampler, SwiftChannel
+from qswift.compiler import MultiIndexSampler, SwiftChannel
 
 
 class QSwiftSampler:
@@ -16,7 +16,7 @@ class QSwiftSampler:
         self.N = N
         self.sampler = FasterImportantSampler(hs)
         self.obs_sampler = FasterImportantSampler(obs_hs)
-        self.mi_sampler = MultiIndexSampler(hs)
+        self.mi_sampler = MultiIndexSampler(self.sampler)
         assert self.xi == np.sum(n_vec)
 
     def sample(self, n_p) -> [SwiftChannel]:

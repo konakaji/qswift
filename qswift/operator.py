@@ -30,7 +30,7 @@ class MultiSwiftOperator(Operator):
     def __repr__(self):
         results = []
         for j, b in zip(self.jvec, self.bvec):
-            results.append(f"S{j}-{b}")
+            results.append(f"S{j}:{b}")
         return " ".join(results)
 
 
