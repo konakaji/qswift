@@ -4,6 +4,7 @@ from qwrapper.sampler import ImportantSampler, FasterImportantSampler
 from qswift.compiler import Compiler, OperatorPool, DefaultOperatorPool
 from qswift.executor import QSwiftExecutor, ThreadPoolQSwiftExecutor
 from qswift.initializer import CircuitInitializer
+from qswift.measurement import MeasureGenerator, NaiveGenerator
 from qswift.metric import QSwiftResult
 from qswift.sampler import QSwiftSampler
 from qswift.util import binom, all_combinations, make_positive
@@ -26,6 +27,7 @@ class QSwift:
         """
         self.initializer = initializer
         self.observable = make_positive(observable)
+        self.measurement_gen = NaiveGenerator(self.observable.hs)
         self.t = t
         self.nshot = nshot
         self.tool = tool
@@ -67,9 +69,9 @@ class QSwift:
     def do_evaluate(self, sampler: ImportantSampler, compiler: Compiler, tau):
         result = QSwiftResult()
         logging.info(f"xi:{0}, n_vec:{[]}, coeff:{1}")
-        qswift_sampler = QSwiftSampler(0, 0, [], sampler, self.observable.hs, self.N)
+        qswift_sampler = QSwiftSampler(0, 0, [], sampler, self.N)
         logging.info(f"sampling...")
-        swift_channels = qswift_sampler.sample(self.n_p)
+        swift_channels = qswift_sampler.sample(self.measurement_gen.generate(self.n_p))
         logging.info(f"executing...")
         value = self.executor.execute(compiler, swift_channels)
         result.add(0, 0, value)
@@ -81,8 +83,8 @@ class QSwift:
                 for n_vec in self._n_vecs(k, xi):
                     coeff = self._coeff(n_vec, k, xi, tau)
                     logging.info(f"xi:{xi}, n_vec:{n_vec}, coeff:{coeff}")
-                    sampler = QSwiftSampler(k, xi, n_vec, sampler, self.observable.hs, self.N)
-                    swift_channels = qswift_sampler.sample(math.ceil(self.n_p * coeff))
+                    sampler = QSwiftSampler(k, xi, n_vec, sampler, self.N)
+                    swift_channels = qswift_sampler.sample(self.measurement_gen.generate(math.ceil(self.n_p * coeff)))
                     value = coeff * self.executor.execute(compiler, swift_channels)
                     result.add(xi, k, value)
                     logging.info(f"value: {value}")

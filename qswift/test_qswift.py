@@ -1,4 +1,5 @@
 import logging
+import random
 from unittest import TestCase
 from qwrapper.hamiltonian import Hamiltonian, to_matrix_hamiltonian
 from qwrapper.obs import PauliObservable
@@ -14,7 +15,7 @@ class TestQSwift(TestCase):
         logging.getLogger().setLevel(logging.INFO)
         t = 1
 
-        obs = Hamiltonian([1], [PauliObservable("ZIIIIIII")], 8)
+        obs = Hamiltonian([1, 1], [PauliObservable("ZIIIIIII"), PauliObservable("ZYIIIIII")], 8)
         hamiltonian = MolecularHamiltonian(8, "6-31g", "hydrogen")
         initializer = XBasisInitializer()
 
@@ -23,6 +24,7 @@ class TestQSwift(TestCase):
         ex = exact.compute()
 
         N = 200
+        random.seed(0)
         qswift = QSwift(obs, initializer, t=t, N=N, K=2, nshot=100, n_p=1000, tool="qulacs")
         result = qswift.evaluate(hamiltonian)
         print(ex, result.sum(0), result.sum(1), result.sum(2))
