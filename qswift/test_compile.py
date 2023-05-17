@@ -15,7 +15,9 @@ class TestQSwiftCircuitEncoder(TestCase):
         self.assertEquals("2.2 T-1 T-1 T2 S-1:0 M0", code)
         paulis = {-1: PauliObservable("XXXIIIII"), 2: PauliObservable("YYYIIIII")}
         observables = {0: PauliObservable("XZZZIIIII")}
-        encoder = QSwiftCircuitExecutor(paulis, observables, XBasisInitializer(), 0.1, nshot=10)
+        encoder = QSwiftCircuitExecutor(operator_pool=DefaultOperatorPool(paulis),
+                                        observables=observables, initializer=XBasisInitializer(),
+                                        tau=0.1, nshot=10)
         encoder.compute(code)
 
 
@@ -33,9 +35,10 @@ class TestQSwiftImplementableEncoder(TestCase):
 
 class TestCompiler(TestCase):
     def test_to_strings(self):
-        compiler = Compiler(operators=[PauliObservable("XX"), PauliObservable("YY"), PauliObservable("ZZ")],
-                            observables=[PauliObservable("ZY"), PauliObservable("XY")], initializer=XBasisInitializer(),
-                            tau=2)
+        compiler = Compiler(
+            operator_pool=DefaultOperatorPool([PauliObservable("XX"), PauliObservable("YY"), PauliObservable("ZZ")]),
+            observables=[PauliObservable("ZY"), PauliObservable("XY")], initializer=XBasisInitializer(),
+            tau=2)
         channels = SwiftChannel(0.1)
         channels.add_time_operators([2, 1])
         channels.add_swift_operator(0, 0)

@@ -6,17 +6,14 @@ from qswift.compiler import Compiler
 
 
 class QSwiftExecutor:
-    def __init__(self, compiler: Compiler):
-        self.compiler = compiler
-
-    def execute(self, swift_channels):
+    def execute(self, compiler: Compiler, swift_channels):
         strings = []
         for swift_channel in swift_channels:
-            string = self.compiler.to_string(swift_channel)
+            string = compiler.to_string(swift_channel)
             strings.append(string)
         values = []
         for j, string in enumerate(strings):
-            value = self.compiler.evaluate(string)
+            value = compiler.evaluate(string)
             values.append(value)
             if j % 1000 == 0:
                 logging.info(f"{j}")
@@ -24,16 +21,15 @@ class QSwiftExecutor:
 
 
 class ThreadPoolQSwiftExecutor(QSwiftExecutor):
-    def __init__(self, compiler: Compiler, max_workers, chunk_size):
-        super().__init__(compiler)
+    def __init__(self, max_workers, chunk_size):
         self.max_workers = max_workers
         self.chunk_size = chunk_size
 
-    def execute(self, swift_channels):
+    def execute(self, compiler: Compiler, swift_channels):
         futures = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as e:
             for index, codes in enumerate(self.split(swift_channels)):
-                futures.append(e.submit(self.val, codes, index))
+                futures.append(e.submit(self.val, compiler, codes, index))
         result = 0
         count = 0
         for future in futures:
@@ -42,11 +38,11 @@ class ThreadPoolQSwiftExecutor(QSwiftExecutor):
         value = result
         return value
 
-    def val(self, codes, index):
+    def val(self, compiler, codes, index):
         result = 0
         count = 0
         for code in codes:
-            v = self.compiler.evaluate(code)
+            v = compiler.evaluate(code)
             result += v
             count += 1
         print(f"{self.chunk_size * (index + 1)}")

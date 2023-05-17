@@ -47,6 +47,24 @@ class SwiftChannel:
         self.measurement = MeasurementOperator(j)
 
 
+class OperatorPool:
+    def get(self, j) -> PauliObservable:
+        pass
+
+
+class DefaultOperatorPool(OperatorPool):
+    def __init__(self, paulis):
+        if isinstance(paulis, collections.abc.Sequence):
+            map = {}
+            for j, obs in enumerate(paulis):
+                map[j] = obs
+            paulis = map
+        self.paulis = paulis
+
+    def get(self, j) -> PauliObservable:
+        return self.paulis[j]
+
+
 class QSwiftStringEncoder:
     def encode(self, swift_channel: SwiftChannel):
         res = [str(swift_channel.coeff)]
@@ -57,12 +75,8 @@ class QSwiftStringEncoder:
 
 
 class QSwiftCircuitExecutor:
-    def __init__(self, paulis, observables, initializer: CircuitInitializer, tau, nshot=0, tool="qulacs"):
-        if isinstance(paulis, collections.abc.Sequence):
-            map = {}
-            for j, pauli in enumerate(paulis):
-                map[j] = pauli
-            paulis = map
+    def __init__(self, operator_pool: OperatorPool, observables, initializer: CircuitInitializer, tau, nshot=0,
+                 tool="qulacs"):
         if isinstance(observables, collections.abc.Sequence):
             map = {}
             for j, obs in enumerate(observables):
@@ -72,7 +86,7 @@ class QSwiftCircuitExecutor:
         for k, obs in observables.items():
             obs_map[k] = PauliObservable(obs.p_string + "X", obs.sign)
         self._initializer = initializer
-        self._paulis = paulis
+        self._operator_pool = operator_pool
         self._observables = obs_map
         self._tau = tau
         self._cache = {}
@@ -107,7 +121,7 @@ class QSwiftCircuitExecutor:
     def add_gate(self, qc: QWrapper, operator: Operator, tau, ancilla_index, targets):
         if isinstance(operator, SwiftOperator):
             qc.s(ancilla_index)
-            pauli = self._paulis[operator.j]
+            pauli = self._operator_pool.get(operator.j)
             if pauli._sign == -1:
                 qc.z(ancilla_index)
             if operator.b == 0:
@@ -119,14 +133,14 @@ class QSwiftCircuitExecutor:
                 pauli.add_controlled_circuit(ancilla_index, targets, qc)
         elif isinstance(operator, TimeOperator):
             if operator.j not in self._cache:
-                self._cache[operator.j] = PauliTimeEvolution(self._paulis[operator.j], tau)
+                self._cache[operator.j] = PauliTimeEvolution(self._operator_pool.get(operator.j), tau)
             self._cache[operator.j].add_circuit(qc)
 
 
 class Compiler:
-    def __init__(self, *, operators, observables, initializer, tau, nshot=0, tool="qulacs"):
+    def __init__(self, *, operator_pool: OperatorPool, observables, initializer, tau, nshot=0, tool="qulacs"):
         self.string_encoder = QSwiftStringEncoder()
-        self.circuit_encoder = QSwiftCircuitExecutor(operators, observables, initializer, tau, nshot, tool)
+        self.circuit_encoder = QSwiftCircuitExecutor(operator_pool, observables, initializer, tau, nshot, tool)
         self.initializer = initializer
 
     def to_string(self, swift_channel: SwiftChannel):

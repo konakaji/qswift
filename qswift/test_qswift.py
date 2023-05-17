@@ -23,6 +23,6 @@ class TestQSwift(TestCase):
         ex = exact.compute()
 
         N = 200
-        qswift = QSwift(hamiltonian, obs, initializer, t=t, N=N, K=1, nshot=100, n_p=10000, tool="qulacs")
-        result = qswift.evaluate()
-        print(ex, result.sum(0), result.sum(1))
+        qswift = QSwift(obs, initializer, t=t, N=N, K=2, nshot=100, n_p=1000, tool="qulacs")
+        result = qswift.evaluate(hamiltonian)
+        print(ex, result.sum(0), result.sum(1), result.sum(2))
