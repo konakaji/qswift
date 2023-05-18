@@ -4,7 +4,7 @@ from qwrapper.sampler import ImportantSampler, FasterImportantSampler
 from qswift.compiler import Compiler, OperatorPool, DefaultOperatorPool
 from qswift.executor import QSwiftExecutor, ThreadPoolQSwiftExecutor
 from qswift.initializer import CircuitInitializer
-from qswift.measurement import MeasureGenerator, NaiveGenerator
+from qswift.measurement import NaiveGenerator
 from qswift.metric import QSwiftResult
 from qswift.sampler import QSwiftSampler
 from qswift.util import binom, all_combinations, make_positive
@@ -25,6 +25,7 @@ class QSwift:
         :param tool qulacs or qiskit
         :param max_workers:
         """
+        self.logger = logging.getLogger("qswift.qswift.QSwift")
         self.initializer = initializer
         self.observable = make_positive(observable)
         self.measurement_gen = NaiveGenerator(self.observable.hs)
@@ -44,7 +45,7 @@ class QSwift:
     def evaluate(self, hamiltonian: Hamiltonian = None, sampler: ImportantSampler = None,
                  operator_pool: OperatorPool = None, lam=None) -> QSwiftResult:
         """
-        Either hamiltonian or (sampler, operator_pool, lam) must be indicated
+        Either hamiltonian or (sampler, operator_pool, lam) must be specified
         """
         if hamiltonian is not None:
             assert sampler is None
@@ -68,26 +69,26 @@ class QSwift:
 
     def do_evaluate(self, sampler: ImportantSampler, compiler: Compiler, tau):
         result = QSwiftResult()
-        logging.info(f"xi:{0}, n_vec:{[]}, coeff:{1}")
+        self.logger.info(f"xi:{0}, n_vec:{[]}, coeff:{1}")
         qswift_sampler = QSwiftSampler(0, 0, [], sampler, self.N)
-        logging.info(f"sampling...")
+        self.logger.info(f"sampling...")
         swift_channels = qswift_sampler.sample(self.measurement_gen.generate(self.n_p))
-        logging.info(f"executing...")
+        self.logger.info(f"executing...")
         value = self.executor.execute(compiler, swift_channels)
         result.add(0, 0, value)
-        logging.info(f"value: {value}")
+        self.logger.info(f"value: {value}")
         for xi in range(2, 2 * self.K + 1):
             for k in range(1, self.N + 1):
                 if 2 * k > xi:
                     continue
                 for n_vec in self._n_vecs(k, xi):
                     coeff = self._coeff(n_vec, k, xi, tau)
-                    logging.info(f"xi:{xi}, n_vec:{n_vec}, coeff:{coeff}")
+                    self.logger.info(f"xi:{xi}, n_vec:{n_vec}, coeff:{coeff}")
                     sampler = QSwiftSampler(k, xi, n_vec, sampler, self.N)
                     swift_channels = qswift_sampler.sample(self.measurement_gen.generate(math.ceil(self.n_p * coeff)))
                     value = coeff * self.executor.execute(compiler, swift_channels)
                     result.add(xi, k, value)
-                    logging.info(f"value: {value}")
+                    self.logger.info(f"value: {value}")
             if xi % 2 == 0:
                 order = int(xi / 2)
                 logging.info(f"order: {order} estimate: {result.sum(order)}")

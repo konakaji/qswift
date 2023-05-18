@@ -3,20 +3,28 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np, logging
 
 from qswift.compiler import Compiler
+import time
 
 
 class QSwiftExecutor:
+    def __init__(self):
+        self.logger = logging.getLogger("qswift.executor.QSwiftExecutor")
+
     def execute(self, compiler: Compiler, swift_channels):
         strings = []
+        start = time.time()
         for swift_channel in swift_channels:
             string = compiler.to_string(swift_channel)
             strings.append(string)
+        middle = time.time()
+        self.logger.debug(f"to_string: {middle - start}")
         values = []
         for j, string in enumerate(strings):
             value = compiler.evaluate(string)
             values.append(value)
             if j % 1000 == 0:
                 logging.info(f"{j}")
+        self.logger.debug(f"evaluate: {time.time() - middle}")
         return np.sum(values)
 
 

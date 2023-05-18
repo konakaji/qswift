@@ -12,7 +12,6 @@ from qswift.qswift import QSwift
 
 class TestQSwift(TestCase):
     def test_qswift(self):
-        logging.getLogger().setLevel(logging.INFO)
         t = 1
 
         obs = Hamiltonian([1, 1], [PauliObservable("ZIIIIIII"), PauliObservable("ZYIIIIII")], 8)
@@ -25,6 +24,6 @@ class TestQSwift(TestCase):
 
         N = 200
         random.seed(0)
-        qswift = QSwift(obs, initializer, t=t, N=N, K=2, nshot=100, n_p=1000, tool="qulacs")
+        qswift = QSwift(obs, initializer, t=t, N=N, K=2, nshot=100, n_p=10000, tool="qulacs")
         result = qswift.evaluate(hamiltonian)
         print(ex, result.sum(0), result.sum(1), result.sum(2))

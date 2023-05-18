@@ -114,7 +114,6 @@ class QSwiftCircuitExecutor:
             self.add_gate(qc, operator, self._tau, ancilla_index, targets)
             if isinstance(operator, MeasurementOperator):
                 value = coeff * self._observables[operator.j].get_value(qc, self._nshot)
-                qc.draw_and_show()
                 return value
         raise AttributeError("measurement is not set")
 
@@ -133,7 +132,7 @@ class QSwiftCircuitExecutor:
                 pauli.add_controlled_circuit(ancilla_index, targets, qc)
         elif isinstance(operator, TimeOperator):
             if operator.j not in self._cache:
-                self._cache[operator.j] = PauliTimeEvolution(self._operator_pool.get(operator.j), tau)
+                self._cache[operator.j] = PauliTimeEvolution(self._operator_pool.get(operator.j), tau, cachable=True)
             self._cache[operator.j].add_circuit(qc)
 
 
