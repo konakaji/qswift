@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="qswift",
-    version="0.0.9",
+    version="0.0.10",
     author="kouhei nakaji",
     author_email="nakajijiji@gmail.com",
     description="You can receive the message 'Hello!!!'",
