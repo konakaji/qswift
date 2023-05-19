@@ -84,7 +84,7 @@ class QSwift:
                 for n_vec in self._n_vecs(k, xi):
                     coeff = self._coeff(n_vec, k, xi, tau)
                     self.logger.info(f"xi:{xi}, n_vec:{n_vec}, coeff:{coeff}")
-                    sampler = QSwiftSampler(k, xi, n_vec, sampler, self.N)
+                    qswift_sampler = QSwiftSampler(k, xi, n_vec, sampler, self.N)
                     swift_channels = qswift_sampler.sample(self.measurement_gen.generate(math.ceil(self.n_p * coeff)))
                     value = coeff * self.executor.execute(compiler, swift_channels)
                     result.add(xi, k, value)

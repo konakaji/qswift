@@ -17,14 +17,14 @@ class QSwiftExecutor:
             string = compiler.to_string(swift_channel)
             strings.append(string)
         middle = time.time()
-        self.logger.debug(f"to_string: {middle - start}")
+        self.logger.debug(f"to_string ({len(swift_channels)}): {middle - start}")
         values = []
         for j, string in enumerate(strings):
             value = compiler.evaluate(string)
             values.append(value)
             if j % 1000 == 0:
                 logging.info(f"{j}")
-        self.logger.debug(f"evaluate: {time.time() - middle}")
+        self.logger.debug(f"evaluate ({len(swift_channels)}): {time.time() - middle}")
         return np.sum(values)
 
 

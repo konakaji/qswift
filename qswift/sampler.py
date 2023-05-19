@@ -30,7 +30,7 @@ class QSwiftSampler:
         for s_list in self._s_list():
             for b_vecs in self._b_list():
                 for m in measurements:
-                    swift_channel = SwiftChannel(self._sign(s_list) * 1)
+                    swift_channel = SwiftChannel(self._sign(s_list))
                     for b_vec, s, n in zip(b_vecs, s_list, self.n_vec):
                         swift_channel.add_multi_swift_operators(self.mi_sampler.sample(s, n), b_vec)
                     swift_channel.add_time_operators(self.sampler.sample_indices(self.N - self.k))
