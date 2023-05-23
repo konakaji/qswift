@@ -5,6 +5,25 @@ class Operator(ABC):
     pass
 
 
+class LOperator(ABC):
+    def __init__(self, j):
+        self.j = j
+
+    def __repr__(self) -> str:
+        return "L" + str(self.j)
+
+
+class MultiLOperator(ABC):
+    def __init__(self, jvec):
+        self.jvec = jvec
+
+    def __repr__(self):
+        results = []
+        for j in self.jvec:
+            results.append(f"L{j}")
+        return " ".join(results)
+
+
 class TimeOperator(Operator):
     def __init__(self, j):
         self.j = j

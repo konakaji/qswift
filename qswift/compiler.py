@@ -27,12 +27,30 @@ class SwiftChannel:
         self.operators = []
         self.measurement = None
 
+    def flatten(self):
+        operators = []
+        for operator in self.operators:
+            if isinstance(operator, MultiLOperator):
+                for j in operator.jvec:
+                    operators.append(LOperator(j))
+            elif isinstance(operator, MultiSwiftOperator):
+                for j, b in zip(operator.jvec, operator.bvec):
+                    operators.append(SwiftOperator(j, b))
+            operators.append(operator)
+        self.operators = operators
+
     def add_time_operator(self, j):
         self.operators.append(TimeOperator(j))
 
     def add_time_operators(self, array):
         for j in array:
             self.add_time_operator(j)
+
+    def add_l_operator(self, j):
+        self.operators.append(LOperator(j))
+
+    def add_multi_l_operators(self, jvec):
+        self.operators.append(MultiLOperator(jvec))
 
     def add_swift_operator(self, j, b):
         self.operators.append(SwiftOperator(j, b))
@@ -67,11 +85,29 @@ class DefaultOperatorPool(OperatorPool):
 
 class QSwiftStringEncoder:
     def encode(self, swift_channel: SwiftChannel):
+        swift_channel.flatten()
         res = [str(swift_channel.coeff)]
-        for o in swift_channel.operators:
+        strings = self.do_encode(res, swift_channel.operators)
+        results = []
+        for s in strings:
+            s.append(str(swift_channel.measurement))
+            results.append(" ".join(s))
+        return results
+
+    def do_encode(self, res, operators):
+        results = []
+        for j, o in enumerate(operators):
+            if isinstance(o, LOperator):
+                res1 = res.copy()
+                res2 = res.copy()
+                res1.append(f"S{o.j}:0")
+                res2.append(f"S{o.j}:1")
+                results.extend(self.do_encode(res1, operators[j + 1:]))
+                results.extend(self.do_encode(res2, operators[j + 1:]))
+                return results
             res.append(str(o))
-        res.append(str(swift_channel.measurement))
-        return " ".join(res)
+        results.append(res)
+        return results
 
 
 class QSwiftCircuitExecutor:

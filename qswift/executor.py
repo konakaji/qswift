@@ -15,7 +15,7 @@ class QSwiftExecutor:
         start = time.time()
         for swift_channel in swift_channels:
             string = compiler.to_string(swift_channel)
-            strings.append(string)
+            strings.extend(string)
         middle = time.time()
         self.logger.debug(f"to_string ({len(swift_channels)}): {middle - start}")
         values = []
