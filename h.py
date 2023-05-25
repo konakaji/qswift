@@ -1,6 +1,4 @@
 import logging
-import random
-from unittest import TestCase
 from qwrapper.hamiltonian import Hamiltonian, to_matrix_hamiltonian
 from qwrapper.obs import PauliObservable
 from benchmark.molecule import MolecularHamiltonian
@@ -13,7 +11,7 @@ if __name__ == '__main__':
     t = 1
     logging.getLogger("qswift.executor.QSwiftExecutor").setLevel(logging.DEBUG)
     logging.getLogger("qswift.qswift.QSwift").setLevel(logging.INFO)
-    obs = Hamiltonian([1], [PauliObservable("ZIIIIIII")], 8)
+    obs = Hamiltonian([1, 1], [PauliObservable("ZIIIIIII"), PauliObservable("ZZIIIIII")], 8)
     hamiltonian = MolecularHamiltonian(8, "6-31g", "hydrogen")
     initializer = XBasisInitializer()
 

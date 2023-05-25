@@ -27,8 +27,7 @@ class QSwift:
         """
         self.logger = logging.getLogger("qswift.qswift.QSwift")
         self.initializer = initializer
-        self.observable = make_positive(observable)
-        self.measurement_gen = NaiveGenerator(self.observable.hs)
+        self.observable = make_positive(observable).gen_ancilla_hamiltonian("X")
         self.t = t
         self.nshot = nshot
         self.tool = tool
@@ -61,18 +60,26 @@ class QSwift:
             assert lam is not None
         tau = lam * self.t / self.N
 
-        compiler = Compiler(operator_pool=operator_pool,
-                            observables=self.observable.paulis,
-                            initializer=self.initializer,
-                            tau=tau, nshot=self.nshot, tool=self.tool)
-        return self.do_evaluate(sampler, compiler, tau)
+        if self.nshot == 0:
+            compiler = Compiler(operator_pool=operator_pool,
+                                observables=[self.observable],
+                                initializer=self.initializer,
+                                tau=tau, nshot=self.nshot, tool=self.tool)
+            mes_generator = NaiveGenerator([1])
+        else:
+            compiler = Compiler(operator_pool=operator_pool,
+                                observables=self.observable.paulis,
+                                initializer=self.initializer,
+                                tau=tau, nshot=self.nshot, tool=self.tool)
+            mes_generator = NaiveGenerator(self.observable.hs)
+        return self.do_evaluate(sampler, compiler, mes_generator, tau)
 
-    def do_evaluate(self, sampler: ImportantSampler, compiler: Compiler, tau):
+    def do_evaluate(self, sampler: ImportantSampler, compiler: Compiler, mes_generator, tau):
         result = QSwiftResult()
         self.logger.info(f"xi:{0}, n_vec:{[]}, coeff:{1}")
         qswift_sampler = QSwiftSampler(0, 0, [], sampler, self.N)
         self.logger.info(f"sampling...")
-        swift_channels = qswift_sampler.sample(self.measurement_gen.generate(self.n_p))
+        swift_channels = qswift_sampler.sample(mes_generator.generate(self.n_p))
         self.logger.info(f"executing...")
         value = self.executor.execute(compiler, swift_channels)
         result.add(0, 0, value)
@@ -85,7 +92,7 @@ class QSwift:
                     coeff = self._coeff(n_vec, k, xi, tau)
                     self.logger.info(f"xi:{xi}, n_vec:{n_vec}, coeff:{coeff}")
                     qswift_sampler = QSwiftSampler(k, xi, n_vec, sampler, self.N)
-                    swift_channels = qswift_sampler.sample(self.measurement_gen.generate(math.ceil(self.n_p * coeff)))
+                    swift_channels = qswift_sampler.sample(mes_generator.generate(math.ceil(self.n_p * coeff)))
                     value = coeff * self.executor.execute(compiler, swift_channels)
                     result.add(xi, k, value)
                     self.logger.info(f"value: {value}")

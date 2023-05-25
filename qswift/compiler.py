@@ -111,16 +111,8 @@ class QSwiftStringEncoder:
 
 
 class QSwiftCircuitExecutor:
-    def __init__(self, operator_pool: OperatorPool, observables, initializer: CircuitInitializer, tau, nshot=0,
+    def __init__(self, operator_pool: OperatorPool, obs_map, initializer: CircuitInitializer, tau, nshot=0,
                  tool="qulacs"):
-        if isinstance(observables, collections.abc.Sequence):
-            map = {}
-            for j, obs in enumerate(observables):
-                map[j] = obs
-            observables = map
-        obs_map = {}
-        for k, obs in observables.items():
-            obs_map[k] = PauliObservable(obs.p_string + "X", obs.sign)
         self._initializer = initializer
         self._operator_pool = operator_pool
         self._observables = obs_map
@@ -175,6 +167,11 @@ class QSwiftCircuitExecutor:
 class Compiler:
     def __init__(self, *, operator_pool: OperatorPool, observables, initializer, tau, nshot=0, tool="qulacs"):
         self.string_encoder = QSwiftStringEncoder()
+        if isinstance(observables, collections.abc.Sequence):
+            map = {}
+            for j, obs in enumerate(observables):
+                map[j] = obs
+            observables = map
         self.circuit_encoder = QSwiftCircuitExecutor(operator_pool, observables, initializer, tau, nshot, tool)
         self.initializer = initializer
 
