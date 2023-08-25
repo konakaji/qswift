@@ -69,6 +69,9 @@ class OperatorPool:
     def get(self, j) -> PauliObservable:
         pass
 
+    def size(self):
+        pass
+
 
 class DefaultOperatorPool(OperatorPool):
     def __init__(self, paulis):
@@ -81,6 +84,9 @@ class DefaultOperatorPool(OperatorPool):
 
     def get(self, j) -> PauliObservable:
         return self.paulis[j]
+
+    def size(self):
+        return len(self.paulis)
 
 
 class QSwiftStringEncoder:
