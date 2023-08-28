@@ -37,4 +37,4 @@ def make_positive(hamiltonian: Hamiltonian):
             paulis.append(PauliObservable(p.p_string, -p.sign))
         else:
             paulis.append(p)
-    return Hamiltonian(hs, paulis, hamiltonian.nqubit)
+    return Hamiltonian(hs, paulis, hamiltonian.nqubit, hamiltonian._identity)
