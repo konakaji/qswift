@@ -127,7 +127,7 @@ class QSwiftCircuitExecutor:
         self._nqubit = list(self._observables.values())[0].nqubit
         self._nshot = nshot
         self._tool = tool
-
+    # TODO: make it run on multipule gpu
     def compute(self, code):
         ancilla_index = self._nqubit - 1
         qc = self._initializer.init_circuit(self._nqubit, {ancilla_index}, self._tool)
