@@ -128,7 +128,7 @@ class QSwiftCircuitExecutor:
         self._nshot = nshot
         self._tool = tool
 
-    def compute(self, code):
+    def compute(self, code, **kwargs):
         ancilla_index = self._nqubit - 1
         qc = self._initializer.init_circuit(self._nqubit, {ancilla_index}, self._tool)
         operators = []
@@ -147,7 +147,11 @@ class QSwiftCircuitExecutor:
         for operator in operators:
             self.add_gate(qc, operator, self._tau, ancilla_index, targets)
             if isinstance(operator, MeasurementOperator):
-                value = coeff * self._observables[operator.j].get_value(qc, self._nshot)
+                tmp = self._observables[operator.j].get_value(qc, self._nshot, **kwargs)
+                if isinstance(tmp, float):
+                    value = coeff * tmp
+                else:
+                    value = (coeff, tmp)
                 return value
         raise AttributeError("measurement is not set")
 
@@ -184,5 +188,5 @@ class Compiler:
     def to_string(self, swift_channel: SwiftChannel):
         return self.string_encoder.encode(swift_channel)
 
-    def evaluate(self, code):
-        return self.circuit_encoder.compute(code)
+    def evaluate(self, code, **kwargs):
+        return self.circuit_encoder.compute(code, **kwargs)
