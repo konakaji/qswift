@@ -129,6 +129,8 @@ class QSwiftCircuitExecutor:
         self._tool = tool
 
     def compute(self, code, **kwargs):
+        # qpu_id = kwargs['qpu_id'] if 'qpu_id' in kwargs else 0
+
         ancilla_index = self._nqubit - 1
         qc = self._initializer.init_circuit(self._nqubit, {ancilla_index}, self._tool)
         operators = []
@@ -149,10 +151,10 @@ class QSwiftCircuitExecutor:
             if isinstance(operator, MeasurementOperator):
                 tmp = self._observables[operator.j].get_value(qc, self._nshot, **kwargs)
                 if isinstance(tmp, float):
-                    value = coeff * tmp
-                else:
-                    value = (coeff, tmp)
-                return value
+                    return coeff * tmp
+                
+                return (coeff, tmp)
+                
         raise AttributeError("measurement is not set")
 
     def add_gate(self, qc: QWrapper, operator: Operator, tau, ancilla_index, targets):
