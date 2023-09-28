@@ -28,25 +28,25 @@ class Sequence:
 
     def evaluate(self, indices):
         if self.nshot == 0:
-            return self.observable.exact_value(self._get_circuit(indices))
+            return self.observable.exact_value(self.get_circuit(indices))
         res = 0
         for h, p in zip(self.observable.hs, self.observable.paulis):
-            res += h * p.get_value(self._get_circuit(indices), self.nshot)
+            res += h * p.get_value(self.get_circuit(indices), self.nshot)
         return res
 
-    def _get_circuit(self, indices):
+    def get_circuit(self, indices):
         qc = self.initializer.init_circuit(self.observable.nqubit, {}, self.tool)
         for index in indices:
-            operator_index = self._get_operator_index(index)
+            operator_index = self.get_operator_index(index)
             operator = self.operator_pool.get(operator_index)
-            tau = self._get_tau(index)
+            tau = self.get_tau(index)
             if index not in self._cache:
                 self._cache[index] = PauliTimeEvolution(operator, tau, cachable=True)
             self._cache[index].add_circuit(qc)
         return qc
 
-    def _get_operator_index(self, index):
+    def get_operator_index(self, index):
         return index % self.operator_pool.size()
 
-    def _get_tau(self, index):
+    def get_tau(self, index):
         return self.taus[math.floor(index / self.operator_pool.size())]
