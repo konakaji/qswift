@@ -37,7 +37,7 @@ class PauliEvolutionPool(GeneralPool):
         return self.taus[math.floor(index / self.operator_pool.size())]
 
     def size(self):
-        self.operator_pool.size() * len(self.taus)
+        return self.operator_pool.size() * len(self.taus)
 
 
 class Sequence:
