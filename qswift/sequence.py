@@ -1,15 +1,49 @@
 import math
 
 from qwrapper.obs import Hamiltonian
-from qwrapper.operator import PauliTimeEvolution
+from qwrapper.operator import PauliTimeEvolution, Operator
 from qswift.initializer import CircuitInitializer
 from qswift.util import make_positive
 from qswift.compiler import OperatorPool
+from abc import ABC, abstractmethod
+
+
+class GeneralPool:
+    def get(self, j) -> Operator:
+        pass
+
+    def size(self):
+        pass
+
+
+class PauliEvolutionPool(GeneralPool):
+    def __init__(self, operator_pool, taus):
+        self.operator_pool = operator_pool
+        self.taus = taus
+        self._cache = {}
+
+    def get(self, j) -> PauliTimeEvolution:
+        if j not in self._cache:
+            operator_index = self.get_operator_index(j)
+            operator = self.operator_pool.get(operator_index)
+            tau = self.get_tau(j)
+            self._cache[j] = PauliTimeEvolution(operator, tau, cachable=True)
+        return self._cache[j]
+
+    def get_operator_index(self, index):
+        return index % self.operator_pool.size()
+
+    def get_tau(self, index):
+        return self.taus[math.floor(index / self.operator_pool.size())]
+
+    def size(self):
+        self.operator_pool.size() * len(self.taus)
 
 
 class Sequence:
-    def __init__(self, observable: Hamiltonian, initializer: CircuitInitializer, operator_pool: OperatorPool,
-                 *, taus, nshot=0, tool="qulacs"):
+    def __init__(self, observable: Hamiltonian, initializer: CircuitInitializer,
+                 operator_pool=None, taus=None, general_pool=None,
+                 *, nshot=0, tool="qulacs"):
         """
         :param observable:
         :param initializer:
@@ -20,7 +54,11 @@ class Sequence:
         """
         self._cache = {}
         self.initializer = initializer
-        self.operator_pool = operator_pool
+        assert general_pool is not None or operator_pool is not None
+        if operator_pool is not None:
+            self.pool: GeneralPool = PauliEvolutionPool(operator_pool, taus)
+        else:
+            self.pool: GeneralPool = general_pool
         self.observable = make_positive(observable)
         self.taus = taus
         self.nshot = nshot
@@ -37,16 +75,5 @@ class Sequence:
     def get_circuit(self, indices):
         qc = self.initializer.init_circuit(self.observable.nqubit, {}, self.tool)
         for index in indices:
-            operator_index = self.get_operator_index(index)
-            operator = self.operator_pool.get(operator_index)
-            tau = self.get_tau(index)
-            if index not in self._cache:
-                self._cache[index] = PauliTimeEvolution(operator, tau, cachable=True)
-            self._cache[index].add_circuit(qc)
+            self.pool.get(index).add_circuit(qc)
         return qc
-
-    def get_operator_index(self, index):
-        return index % self.operator_pool.size()
-
-    def get_tau(self, index):
-        return self.taus[math.floor(index / self.operator_pool.size())]

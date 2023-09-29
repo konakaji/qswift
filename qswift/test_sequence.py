@@ -27,5 +27,5 @@ class TestSequence(TestCase):
 
         operator_pool = DefaultOperatorPool(paulis)
 
-        seq = Sequence(obs, initializer, operator_pool, taus=[0.1, 0.2, 0.4])
+        seq = Sequence(obs, initializer, operator_pool=operator_pool, taus=[0.1, 0.2, 0.4])
         self.assertAlmostEquals(obs.exact_value(qc), seq.evaluate([0, 1, 2, 4]))
