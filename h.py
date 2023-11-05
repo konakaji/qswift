@@ -6,6 +6,7 @@ from benchmark.molecule import MolecularHamiltonian
 from qswift.exact import ExactComputation
 from qswift.initializer import XBasisInitializer
 from qswift.qswift import QSwift
+import random, numpy as np
 
 if __name__ == '__main__':
     t = 1
@@ -20,6 +21,8 @@ if __name__ == '__main__':
     ex = exact.compute()
 
     N = 200
+    random.seed(0)
+    np.random.seed(0)
     qswift = QSwift(obs, initializer, t=t, N=N, K=2, nshot=0, n_p=10000, tool="qulacs")
     result = qswift.evaluate(hamiltonian)
     print(ex, result.sum(0), result.sum(1), result.sum(2))
