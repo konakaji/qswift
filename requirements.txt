@@ -1,4 +1,2 @@
 setuptools~=60.2.0
-qwrapper @ git+ssh://git@github.com/konakaji/qwrapper.git
-benchmark @ git+ssh://git@github.com/konakaji/benchmark.git
 bitarray>=2.6.1
