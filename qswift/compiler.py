@@ -149,12 +149,7 @@ class QSwiftCircuitExecutor:
         for operator in operators:
             self.add_gate(qc, operator, self._tau, ancilla_index, targets)
             if isinstance(operator, MeasurementOperator):
-                tmp = self._observables[operator.j].get_value(qc, self._nshot, **kwargs)
-                if isinstance(tmp, float):
-                    return coeff * tmp
-                
-                return (coeff, tmp)
-                
+                return coeff * self._observables[operator.j].get_value(qc, self._nshot, **kwargs)
         raise AttributeError("measurement is not set")
 
     def add_gate(self, qc: QWrapper, operator: Operator, tau, ancilla_index, targets):
