@@ -1,6 +1,6 @@
 # qSWIFT
 
-qSWIFT is a Python package that implements a higher-order randomized algorithm for quantum simulation. It is designed to efficiently compute Hamiltonian dynamics with improved error bounds. The algorithm is based on the research presented in the paper: [arXiv:2302.14811](https://arxiv.org/abs/2302.14811).
+qSWIFT is a Python package that implements a higher-order randomized algorithm for quantum simulation. It is designed to efficiently compute Hamiltonian dynamics with improved error bounds. The algorithm is based on the research presented in the paper: [arXiv:2302.14811](https://arxiv.org/abs/2302.14811) (accepted by PRX Quantum).
 Please cite the paper, when you utilize this package.
 
 ## Installation
